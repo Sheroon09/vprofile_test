@@ -1,0 +1,13 @@
+---
+- hosts: jbossserver
+  become: yes
+  gather_facts: False
+  tasks:
+
+    - name: deploying into jboss application server
+      copy:
+        src: /var/lib/jenkins/workspace/build/target/vprofile-v1.war
+        dest: /usr/share/wildfly-10.1/standalone/deployments
+
+
+

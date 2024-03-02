@@ -1,0 +1,89 @@
+---
+- hosts: jbossu
+  gather_facts: false
+  become: yes 
+  vars_files:
+    - jboss-file
+
+  tasks:
+    
+    - name: java installation 
+      apt:
+        update_cache: yes      
+        name: "{{item}}" 
+        state: present
+      with_items:
+        - wget
+        - unzip
+        - python3  
+        - "{{java}}" 
+        - python-pexpect
+     
+      tags: [packages]    
+
+    - name: creating user 
+      user:
+        name: "{{username}}"
+        state: present
+        comment: adminuser
+        shell: /bin/bash
+        password: "{{userpassword}}"
+      
+      tags: [user]  
+ 
+    - name: downloading wildfly url
+      get_url:
+        url: http://download.jboss.org/wildfly/10.1.0.Final/{{wildfly_zip}}
+        dest: /root
+        mode: 0755
+      tags: [wildfly]
+
+    - name: unzip wildfly 
+      unarchive:
+        src: /root/{{wildfly_zip}}
+        dest: /usr/share
+        remote_src: yes
+        owner: 'jboss'
+        mode: 0755
+      
+      tags: [wildfly]
+
+    - name: setting environment varibale for java and jboss
+      shell: nohup ./evn.sh &   
+
+    - name: replacing bind address with any ip
+      replace:
+        path: /usr/share/{{wildfly_dir}}/standalone/configuration/standalone.xml
+        regexp: 127.0.0.1
+        replace: 0.0.0.0    
+      
+      tags: [replace] 
+
+    - name: executing script to add user in management console
+      expect: 
+        command: /usr/share/{{wildfly_dir}}/bin/add-user.sh
+        responses:
+          What type of user do you wish to add?: "{{mgnt_application}}"
+          Enter the details of the new user to add.: "{{mgnt_user}}"
+          Password: "{{mgnt_password}}"
+          Re-enter Password : "{{mgnt_re_password}}"
+          What groups do you want this user to belong to?: "{{mgnt_group}}"
+          Is this correct yes/no?: "{{conform}}"
+          Is this new user going to be used for one AS process to connect to another AS process?: "{{conform}}"
+          
+      tags: [mgntuser] 
+
+    
+   
+    - name: Download latest VProfile.war file
+      get_url: url=http://{{nexusip}}:8081/nexus/content/repositories/VProfile-repo/{{groupid}}/{{time}}/{{build}}/{{vprofile_version}} dest=/tmp/ mode=777 remote_src=yes
+
+    - name: deploying into jboss application server
+      copy:
+        src: /tmp/{{vprofile_version}}
+        dest: /usr/share/{{wildfly_dir}}/standalone/deployments
+        remote_src: yes
+    - name: executing standalone script
+      shell: nohup /usr/share/{{wildfly_dir}}/bin/standalone.sh &
+      
+      tags: [shell]
