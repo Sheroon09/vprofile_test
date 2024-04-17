@@ -1,4 +1,12 @@
-## Prerequisites
+groups:
+  - name: custom_rules
+    rules:
+      - record: node_memory_MemFree_percent
+        expr: 100 - (100 * node_memory_MemFree_bytes / node_memory_MemTotal_bytes)
+
+      - record: node_filesystem_free_percent
+        expr: 100 * node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}
+        ## Prerequisites
 - JDK 1.8 or later
 - Maven 3 or later
 - MySQL 5.6 or later
