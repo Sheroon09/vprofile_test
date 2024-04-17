@@ -1,3 +1,7 @@
+scrape_configs:
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['localhost:3100']
 groups:
   - name: custom_rules
     rules:
